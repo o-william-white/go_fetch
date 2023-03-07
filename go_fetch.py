@@ -32,10 +32,10 @@ python go_fetch.py --taxonomy "Arabidopsis" --target chloroplast --email o.willi
 python go_fetch.py --lineage "Brassicales,Brassicaceae,Camelineae,Arabidopsis,Arabidopsis thaliana" --target chloroplast --email o.william.white@gmail.com
 
 # download chloroplast sequences for Arabidopsis
-python go_fetch.py --taxonomy Arabidopsis --target chloroplast --download --min 2 --max 10 --output example --name Arababidopsis_go_db --email o.william.white@gmail.com
+python go_fetch.py --taxonomy Arabidopsis --target chloroplast --download --min 2 --max 10 --output example --name Arabidopsis_go_db --email o.william.white@gmail.com
 
 # download chloroplast sequences from lineage for Arabidopsis thaliana
-python go_fetch.py --lineage "Brassicales,Brassicaceae,Camelineae,Arabidopsis,Arabidopsis thaliana" --target chloroplast --download --min 2 --max 10 --output example --name Arababidopsis_go_db --email o.william.white@gmail.com
+python go_fetch.py --lineage "Brassicales,Brassicaceae,Camelineae,Arabidopsis,Arabidopsis thaliana" --target chloroplast --download --min 2 --max 10 --output example --name Arabidopsis_go_db --email o.william.white@gmail.com --overwrite
 
 '''
 
