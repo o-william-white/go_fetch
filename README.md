@@ -18,7 +18,7 @@ Please report any issues to o.william.white@gmail.com
 
 ### Dependencies
 
-The script requires GetOrganelle, biopython and trf. These can be installed in a conda environment:
+The script requires getorganelle, biopython and trf. These can be installed in a conda environment:
 ```
 conda create -n go_fetch -c bioconda getorganelle biopython trf
 ```
