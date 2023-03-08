@@ -179,22 +179,22 @@ def lineage_download(lineage, target, min_n, max_n, path):
     for taxonomy in lineage:
         if threshold_met == False:
             target_ids = taxonomy_count(taxonomy, target)
-            if target_ids == None:
-                next
-            else:
+            if target_ids != None:
                 target_ids_lineage.extend(target_ids)
-            # catch error if root of lineage reached abd there are not enough records on ncbi
-            if taxonomy == lineage_root and len(target_ids) < min_n:
-                sys.exit(f'Error: Only {len(target_ids)} {target} sequence files available for {taxonomy} at root of lineage. Does not meet minimum theshold of {min_n}')
-            if len(target_ids) >= min_n:
-                print(f'\nMinimum threshold of {min_n} met for {taxonomy}')
-                threshold_met = True
-                # print the number of sequences that will be downloaded
-                if len(target_ids) > max_n:
-                    print(f'\nDownloading the first {max_n} sequences')
-                    target_ids = target_ids[0:max_n]
-                else:
-                    print(f'\nDownloading {len(target_ids)} sequences')
+                # catch error if root of lineage reached abd there are not enough records on ncbi
+                if taxonomy == lineage_root and len(target_ids) < min_n:
+                    sys.exit(f'Error: Only {len(target_ids)} {target} sequence files available for {taxonomy} at root of lineage. Does not meet minimum theshold of {min_n}')
+                if len(target_ids) >= min_n:
+                    print(f'\nMinimum threshold of {min_n} met for {taxonomy}')
+                    print(target_ids)
+                    threshold_met = True
+                    # print the number of sequences that will be downloaded
+                    if len(target_ids) > max_n:
+                        print(f'\nDownloading the first {max_n} sequences')
+                        target_ids = target_ids[0:max_n]
+                        print(target_ids)
+                    else:
+                        print(f'\nDownloading {len(target_ids)} sequences')
                     # download sequences
                     for target_id in target_ids:
                         target_efetch(id=target_id, format='fasta', output_dir=f'{path}/fasta')
