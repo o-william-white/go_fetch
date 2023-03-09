@@ -44,6 +44,7 @@ parser = argparse.ArgumentParser(description=argparse_description, usage=argpars
 parser.add_argument('--taxonomy',     help='Taxonomy of rank to search for e.g. "Arabidopsis"', type=str, required=False)
 parser.add_argument('--lineage',      help='Comma separated list of lineage to search across e.g. "Brassicales,Brassicaceae,Camelineae,Arabidopsis,Arabidopsis thaliana"', type=str, required=False)
 parser.add_argument('--target',       help='Target sequence type.', choices=['chloroplast', 'mitochondrion', 'ribosomal'], required=True)
+parser.add_argument('--db',           help='Databse to search/download from. Either refseq (NCBI) or genbank (INSDC). Default=refseq.', choices=['refseq', 'genbank'], required=False, default='refseq')
 parser.add_argument('--download',     help='Only count the number of sequences on NCBI', action='store_true', required=False)
 parser.add_argument('--name',         help='Database name. Required with --download.', required=False)
 parser.add_argument('--min',          help='Minimum number of target sequences to download. Required with --download.', type=int, required=False)
@@ -110,10 +111,15 @@ def taxonomy_exists(taxonomy):
             return False
 
 # esearch
-def target_esearch(rank, target, max_n):
+def target_esearch(rank, target, max_n, db):
     # define search term
     if target == 'chloroplast' or target == 'mitochondrion':
-        search_term = rank + '[Organism] AND ' + target + '[Title] AND complete genome[Title] AND refseq[filter]'
+        # genbank is part of the International Nucleotide Sequence Database Collaboration (INSDC) along with the European Nucleotide Archive and the DNA Data Bank of Japan (DDBJ)
+        # refseq are derived from genbank but not part of
+        if db == 'refseq':
+            search_term = rank + '[Organism] AND ' + target + '[Title] AND complete genome[Title] AND refseq[filter]'
+        elif db == 'genbank':
+            search_term = rank + '[Organism] AND ' + target + '[Title] AND complete genome[Title] AND ddbj_embl_genbank[filter]'
     else:
         if target == 'ribosomal':
             search_term = rank + '[Organism] AND 28S[Title] AND refseq[filter]'
@@ -131,7 +137,7 @@ def target_efetch(id, format, output_dir):
     SeqIO.write(seq_record, output_path, format)
 
 # print counts for taxonomy and return record ids
-def taxonomy_count(taxonomy, target):
+def taxonomy_count(taxonomy, target, db):
     # check if taxonomy exists in ncbi
     if not taxonomy_exists(taxonomy):
         # print counts
@@ -139,7 +145,7 @@ def taxonomy_count(taxonomy, target):
         # return None
         return None
     else:
-        record = target_esearch(taxonomy, target, 1000000)
+        record = target_esearch(taxonomy, target, 1000000, db)
         counts = record["Count"]
         # print counts
         print(f'{taxonomy}\t{counts}')
@@ -151,8 +157,8 @@ def taxonomy_count(taxonomy, target):
         return target_ids
 
 # download taxonomy
-def taxonomy_download(taxonomy, target, min_n, max_n, path):
-    target_ids = taxonomy_count(taxonomy, target)
+def taxonomy_download(taxonomy, target, min_n, max_n, path, db):
+    target_ids = taxonomy_count(taxonomy, target, db)
     if target_ids == None:
         sys.exit(f'Error: No {target} sequence files available for {taxonomy}')
     elif len(target_ids) < min_n:
@@ -172,13 +178,13 @@ def taxonomy_download(taxonomy, target, min_n, max_n, path):
                 target_efetch(id=target_id, format='gb', output_dir=f'{path}/genbank')
 
 # download lineage
-def lineage_download(lineage, target, min_n, max_n, path):
+def lineage_download(lineage, target, min_n, max_n, path, db):
     threshold_met = False
     target_ids_lineage = []
     lineage_root = lineage[-1]
     for taxonomy in lineage:
         if threshold_met == False:
-            target_ids = taxonomy_count(taxonomy, target)
+            target_ids = taxonomy_count(taxonomy, target, db)
             if target_ids != None:
                 target_ids_lineage.extend(target_ids)
                 # catch error if root of lineage reached abd there are not enough records on ncbi
@@ -186,13 +192,11 @@ def lineage_download(lineage, target, min_n, max_n, path):
                     sys.exit(f'Error: Only {len(target_ids)} {target} sequence files available for {taxonomy} at root of lineage. Does not meet minimum theshold of {min_n}')
                 if len(target_ids) >= min_n:
                     print(f'\nMinimum threshold of {min_n} met for {taxonomy}')
-                    print(target_ids)
                     threshold_met = True
                     # print the number of sequences that will be downloaded
                     if len(target_ids) > max_n:
                         print(f'\nDownloading the first {max_n} sequences')
                         target_ids = target_ids[0:max_n]
-                        print(target_ids)
                     else:
                         print(f'\nDownloading {len(target_ids)} sequences')
                     # download sequences
@@ -283,12 +287,12 @@ if args.download:
 # taxonomy count
 if args.taxonomy != None and args.download == False:
     print(f'\nCounting the number of {args.target} sequences for {args.taxonomy}:\n')
-    taxonomy_count(args.taxonomy, args.target)
+    taxonomy_count(args.taxonomy, args.target, args.db)
 
 # taxonomy download
 if args.taxonomy != None and args.download == True:
     print(f'\nDownloading {args.target} sequences for {args.taxonomy}:\n')
-    taxonomy_download(args.taxonomy, args.target, args.min, args.max, output_path)
+    taxonomy_download(args.taxonomy, args.target, args.min, args.max, output_path, args.db)
     # format seed
     format_seed(args.target, output_path)
     # format gene
@@ -309,13 +313,13 @@ if args.lineage != None:
         print(f'\nCounting the number of {args.target} sequences across the lineage:')
         print(f'   {";".join(lineage)}\n')
         for taxonomy in lineage:
-            taxonomy_count(taxonomy, args.target)
+            taxonomy_count(taxonomy, args.target, args.db)
 
     # lineage download
     if args.download:
         print(f'\nDownloading {args.target} sequences across the lineage:')
         print(f'   {";".join(lineage)}\n')
-        lineage_download(lineage, args.target, args.min, args.max, output_path)
+        lineage_download(lineage, args.target, args.min, args.max, output_path, args.db)
         # format seed
         format_seed(args.target, output_path)
         # format gene
