@@ -121,8 +121,9 @@ def target_esearch(rank, target, max_n, db):
         elif db == 'genbank':
             search_term = rank + '[Organism] AND ' + target + '[Title] AND complete genome[Title] AND ddbj_embl_genbank[filter]'
     else:
+        # note refseq not neccessary or used for ribosomal search
         if target == 'ribosomal':
-            search_term = rank + '[Organism] AND 28S[Title] AND refseq[filter]'
+            search_term = rank + '[Organism] AND 28S[Title] '
     # esearch
     handle = Entrez.esearch(db='Nucleotide', term=search_term, retmax=max_n)
     record = Entrez.read(handle)
