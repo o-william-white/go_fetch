@@ -51,5 +51,44 @@ def taxid_exists(taxid):
 assert taxid_exists(3701) == True
 assert taxid_exists(123456789) == False
 
-# 
+# get scientific name from taxonomic id
+def get_scientific_name(taxid):
+    handle = Entrez.efetch(db="Taxonomy", id=taxid)
+    record = Entrez.read(handle)
+    return record[0]["ScientificName"]
+
+assert get_scientific_name("3702") == "Arabidopsis thaliana"
+
+# get lineage from taxid
+def get_lineage(taxid):
+    # efetch
+    handle = Entrez.efetch(db="Taxonomy", id=taxid, retmode="xml")
+    records = Entrez.read(handle)
+    # get lineage
+    lineage = records[0]["Lineage"].split("; ")[::-1]
+    # return lineage
+    return lineage
+
+assert get_lineage(3701) == ['Camelineae', 'Brassicaceae', 'Brassicales', 'malvids', 'rosids', 'Pentapetalae', 'Gunneridae', 'eudicotyledons', 'Mesangiospermae', 'Magnoliopsida', 'Spermatophyta', 'Euphyllophyta', 'Tracheophyta', 'Embryophyta', 'Streptophytina', 'Streptophyta', 'Viridiplantae', 'Eukaryota', 'cellular organisms']
+
+# generate search term
+# target = 'chloroplast', 'mitochondrion', 'robosomal'
+# db can be refseq or genbank
+def search_term(taxid, target, db):
+    # add taxid to term
+    term = f"{taxid}[Organism]"
+    if target == 'chloroplast' or target == 'mitochondrion':
+        # genbank is part of the International Nucleotide Sequence Database Collaboration (INSDC) along with the European Nucleotide Archive and the DNA Data Bank of Japan (DDBJ)
+        # refseq are derived from genbank but not part of
+        term += f" AND {target}[Title] AND complete genome[Title]"
+    if target == 'robosomal':
+        term += f" AND 28S[Title] AND 18S[Title] AND 5.88S[Title]"
+    if db == 'refseq':
+        term += f" AND refseq[filter]"
+    if db == 'genbank':
+        term += f" AND ddbj_embl_genbank[filter]"
+    return term 
+
+print(search_term(get_scientific_name(3701), "chloroplast", "refseq"))
+
 
