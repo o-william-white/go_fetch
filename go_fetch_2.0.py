@@ -11,7 +11,7 @@ argparse_description = '''
 '''
 
 argparse_usage = '''
-python3 go_fetch_2.0.py --taxonomy "Arabidopsis lyrata" --target chloroplast --db genbank --email o.william.white@gmail.com
+python3 go_fetch_2.0.py --taxonomy "Arabidopsis lyrata" --target chloroplast --db genbank --min 2 --max 22 --email o.william.white@gmail.com
 '''
 
 # argparse
@@ -20,8 +20,8 @@ parser.add_argument('--taxonomy',     help='Taxonomy of rank to search for e.g. 
 parser.add_argument('--target',       help='Target sequence type.', choices=['chloroplast', 'mitochondrion', 'ribosomal'], required=True)
 parser.add_argument('--db',           help='Databse to search/download from. Either refseq (NCBI) or genbank (INSDC). Default=refseq.', choices=['refseq', 'genbank'], required=False, default='refseq')
 #parser.add_argument('--name',         help='Database name. Required with --download.', required=False)
-#parser.add_argument('--min',          help='Minimum number of target sequences to download. Required with --download.', type=int, required=False)
-#parser.add_argument('--max',          help='Maximum number of target sequences to download. Must be larger than --min. Required with --download.',       type=int, required=False)
+parser.add_argument('--min',          help='Minimum number of target sequences to download.', type=int, required=False)
+parser.add_argument('--max',          help='Maximum number of target sequences to download. Must be larger than --min.', type=int, required=False)
 #parser.add_argument('--output',       help='Output directory. Required with --download.', required=False)
 parser.add_argument('--email',        help='Email for Entrez.', required=True)
 #parser.add_argument('--overwrite',    help='Overwrite output directory.', action='store_true', required=False)
@@ -33,6 +33,11 @@ args = parser.parse_args()
 #    subprocess.call(["samtools"], stderr=subprocess.DEVNULL)
 #except FileNotFoundError:
 #    sys.exit("Error: samtools not in path")
+
+# additional checks
+
+if args.max <= args.min:
+    sys.exit('Error: --max must be larger than --min')
 
 
 ### set email
@@ -116,6 +121,14 @@ def search_term(taxid, target, db):
         term += f" AND ddbj_embl_genbank[filter]"
     return term 
 
+# count the number of sequences on ncbi using the term generated
+def entrez_esearch(input_term):
+    # esearch
+    handle = Entrez.esearch(db='Nucleotide', term=input_term, retmax=999)
+    record = Entrez.read(handle)
+    return record["IdList"]
+
+
 ### main
 
 # get and check ncbi taxonomy_id and scientific_name
@@ -146,6 +159,7 @@ lineage.insert(0, taxonomy_name)
 # get children
 children = get_children(taxonomy_name)
 
+# print phylogeny
 spacer = ""
 for l in lineage[::-1]:
     print(f"{spacer}{l}")
@@ -156,16 +170,43 @@ for l in lineage[::-1]:
 for c in children: 
     print(f"{spacer}{c}")
 
-# define search term
-term = search_term(args.taxonomy, args.target, args.db)
-print(f"\nUsing search term = {term}")
 
-# count the number of sequences on ncbi using the term generated
-def target_count(input_term):
+
+####### working progress... #######
+
+def recursive_search(taxonomy, lineage, target, db, min_th, max_th):
+
+    # define search term
+    term = search_term(taxonomy, target, db)
+    print(f"\nUsing search term = {term}")
+
     # esearch
-    handle = Entrez.esearch(db='Nucleotide', term=input_term, retmax=999)
-    record = Entrez.read(handle)
-    return record["Count"]
+    idlist = entrez_esearch(term)
 
-print(target_count(term))
+    # count sequences
+    count = len(idlist)
+    print(f"{count} sequences found")
 
+    # does the number of sequences meet the minimum threshold
+    if count >= min_th:
+        print("Minimum threhold reached")
+
+        # if maximum not exceeded, download all
+        if count <= max_th: 
+            print("Maximum threshold not exceeded. Downloading {count} sequences")
+            print(f"EFETCH")
+    
+        # if maximum exceeded, download subsample
+        else:
+            print("Maximum threshold exceeded. Subsampling {count} sequences from children")
+            print(f"SUBSAMPLE")
+    
+    else: 
+        print("Minimum threhold not reached, moving up within lineage")
+        taxonomy = lineage[lineage.index(taxonomy)+1]
+        print(f"Next level is {taxonomy}")
+
+
+recursive_search(taxonomy_name, lineage, args.target, args.db, args.min, args.max)
+
+################################
