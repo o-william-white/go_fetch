@@ -105,7 +105,7 @@ def taxid_exists(taxid):
         return True
     else:
         return False
-#assert taxid_exists(3701) == True
+assert taxid_exists(3701) == True
 #assert taxid_exists(123456789) == False
 
 # get scientific name from taxonomic id
