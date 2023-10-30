@@ -37,8 +37,6 @@ The script will count the number or target sequences available for the user give
 
 If the maximum number of sequences is exceeded, based on the `--max` parameter, the script will subsample the children lineages, aiming for an even sampling across children. 
 
-```
-
 ### Example usage
 
 Below are simple examples of how to use the script. 
