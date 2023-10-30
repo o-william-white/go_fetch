@@ -1,20 +1,8 @@
-# go fetch
+# Go fetch
 
-Simple python script to count or fetch reference sequences from NCBI and format for GetOrganelle (i.e. seed and gene format). 
+Simple python script to fetch organelle or ribosomal reference sequences from NCBI for a given taxonomy. 
 
-The script requires a single taxonomic rank (--taxonomy) or taxonomic lineage (--lineage) as input.
-
-If the --download option is specified, the user must also specify --min and --max thresholds for the number of sequnces to download. 
-
-If the --download option is used with --taxonomy, the script will download sequences for this rank. 
-
-If the --download option is used with --lineage, the script will iterate through the lineage and find the rank at which a minimum number of references is available to download. 
-
-Sequences are downloaded from NCBI using using Biopython. 
-
-If the target sequence downloaded is an organelle genome, tandem repeats are masked using trf and annotated genes are extrated using GetOrganelle util script get_annotated_regions_from_gb.py. 
-
-Please report any issues to o.william.white@gmail.com
+The script was originally designed to format reference data for GetOrganelle (i.e. seed and gene format). You can specify if you want sequences formatted for GetOrganelle using the `--getorganelle` parameter.
 
 ### Dependencies
 
@@ -23,19 +11,80 @@ The script requires getorganelle, biopython and trf. These can be installed in a
 conda create -n go_fetch -c bioconda getorganelle biopython trf
 ```
 
-### Usage
+### Input
+
+Below is a summary of the main input parameters.
+
+```
+  -h, --help            show this help message and exit
+  --taxonomy TAXONOMY   Taxonomy of rank to search for e.g. "Arabidopsis"
+  --target TARGET       Target sequence type. Options = [chloroplast, mitochondrion, ribosomal].
+  --db DB               Database to search. Options = [refseq, genbank].
+  --min MIN             Minimum number of target sequences to download.
+  --max MAX             Maximum number of target sequences to download. 
+  --seed SEED           Seed used for subsampling.
+  --output OUTPUT       Output directory.
+  --overwrite           Overwrite output directory.
+  --getorganelle        Format seed and gene database for get organelle.
+  --email EMAIL         Email for Entrez.
+```
+
+### How it works
+
+The user provides a taxonomy as a taxonomic name (e.g. "Arabidopsis thaliana") or NCBI taxonomy ID (e.g. "3702"). 
+
+The script will count the number or target sequences available for the user given taxonomy. If there are not enough sequence available based on the `--min` parameter, the script will count the number of sequences available for the parent rank, until the minimum threshold is reached. 
+
+If the maximum number of sequences is exceeded, based on the `--max` parameter, the script will subsample the children lineages, aiming for an even sampling across children. 
+
+```
+
+### Example usage
 
 Below are simple examples of how to use the script. 
 ```
-# count sequences chloroplast sequences for Arabidopsis
-python go_fetch.py --taxonomy "Arabidopsis" --target chloroplast --email o.william.white@gmail.com
+# Arabidopsis chloroplast
+python3 go_fetch.py \
+   --taxonomy 3701 \
+   --target mitochondrion 
+   --db genbank z
+   --min 5 --max 10 \
+   --output arabidopsis_chloroplast \
+   --overwrite \
+   --getorganelle \
+   --email user_email@example.com
 
-# count sequences chloroplast sequences across lineage for Arabidopsis thaliana
-python go_fetch.py --lineage "Brassicales,Brassicaceae,Camelineae,Arabidopsis,Arabidopsis thaliana" --target chloroplast --email o.william.white@gmail.com
+# Arabidopsis ribosomal
+python3 go_fetch.py \
+   --taxonomy "Arabidopsis" \
+   --target ribosomal \
+   --db genbank \
+   --min 5 --max 10 \
+   --output arabidopsis_ribosomal \
+   --overwrite \
+   --getorganelle \
+   --email user_email@example.com
 
-# download chloroplast sequences for Arabidopsis
-python go_fetch.py --taxonomy Arabidopsis --target chloroplast --download --min 2 --max 10 --output example --name Arabidopsis_go_db --email o.william.white@gmail.com
+# Drosophila mitochondrion
+python3 go_fetch.py \
+   --taxonomy "Drosophila" \
+   --target mitochondrion \
+   --db genbank \
+   --min 10 --max 50 \
+   --output drosophila_mitochondrion \
+   --overwrite \
+   --getorganelle \
+   --email user_email@example.com
 
-# download chloroplast sequences from lineage for Arabidopsis thaliana
-python go_fetch.py --lineage "Brassicales,Brassicaceae,Camelineae,Arabidopsis,Arabidopsis thaliana" --target chloroplast --download --min 2 --max 10 --output example --name Arabidopsis_go_db --email o.william.white@gmail.com --overwrite
+# Drosophila ribosomal
+python3 go_fetch.py \
+   --taxonomy "Drosophila" \
+   --target ribosomal \
+   --db genbank \
+   --min 10 --max 50 \
+   --output drosophila_ribosomal \
+   --overwrite \
+   --getorganelle \
+   --email user_email@example.com
 ```
+

@@ -13,23 +13,23 @@ argparse_description = """
 
 argparse_usage = """
 # Arabidopsis chloroplast
-python3 go_fetch_2.0.py --taxonomy 3701 --target mitochondrion --db genbank --min 5  --max 10 --output arabidopsis_chloroplast --overwrite --email o.william.white@gmail.com --getorganelle
+python3 go_fetch.py --taxonomy 3701 --target mitochondrion --db genbank --min 5  --max 10 --output arabidopsis_chloroplast --overwrite --getorganelle --email user_email@example.com 
 
 # Arabidopsis ribosomal
-python3 go_fetch_2.0.py --taxonomy "Arabidopsis" --target ribosomal --db genbank --min 5  --max 10 --output arabidopsis_ribosomal --overwrite --email o.william.white@gmail.com --getorganelle
+python3 go_fetch.py --taxonomy "Arabidopsis" --target ribosomal --db genbank --min 5  --max 10 --output arabidopsis_ribosomal --overwrite --getorganelle --email user_email@example.com 
 
-# Solariellidae mitochondrion
-python3 go_fetch_2.0.py --taxonomy "Solariellidae" --target mitochondrion --db genbank --min 10  --max 50 --output solariellidae_mitochondrion --overwrite --email o.william.white@gmail.com --getorganelle
+# Drosophila mitochondrion
+python3 go_fetch.py --taxonomy "Drosophila" --target mitochondrion --db genbank --min 10  --max 50 --output drosophila_mitochondrion --overwrite --getorganelle --email user_email@example.com  
 
-# Solariellidae ribosomal
-python3 go_fetch_2.0.py --taxonomy "Solariellidae" --target ribosomal --db genbank --min 10  --max 50 --output solariellidae_ribosomal --overwrite --email o.william.white@gmail.com --getorganelle 
+# Drosophila ribosomal
+python3 go_fetch.py --taxonomy "Drosophila" --target ribosomal --db genbank --min 10  --max 50 --output drosophila_ribosomal --overwrite --getorganelle --email user_email@example.com 
 """
 
 # argparse
 parser = argparse.ArgumentParser(description=argparse_description, usage=argparse_usage)
 parser.add_argument("--taxonomy",     help="Taxonomy of rank to search for e.g. \"Arabidopsis\"", type=str, required=True)
 parser.add_argument("--target",       help="Target sequence type.", choices=["chloroplast", "mitochondrion", "ribosomal"], required=True)
-parser.add_argument("--db",           help="Database to searchm. Either refseq (NCBI) or genbank (INSDC). Default=refseq.", choices=["refseq", "genbank"], required=False, default="refseq")
+parser.add_argument("--db",           help="Database to search. Either refseq (NCBI) or genbank (INSDC). Default=refseq.", choices=["refseq", "genbank"], required=False, default="refseq")
 parser.add_argument("--min",          help="Minimum number of target sequences to download.", type=int, required=False)
 parser.add_argument("--max",          help="Maximum number of target sequences to download. Must be larger than --min.", type=int, required=False)
 parser.add_argument("--seed",         help="Seed used for subsampling.", type=int, required=False)
@@ -55,7 +55,7 @@ except FileNotFoundError:
     sys.exit("Error: trf not in path")
 
 try:
-    subprocess.call(["get_annotated_regions_from_gb.py"], stderr=subprocess.DEVNULL)
+    subprocess.call(["get_annotated_regions_from_gb.py"], stdout=subprocess.DEVNULL)
 except FileNotFoundError:
     sys.exit("Error: get_annotated_regions_from_gb.py not in path")
 
