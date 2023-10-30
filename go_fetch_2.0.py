@@ -12,25 +12,17 @@ argparse_description = """
 """
 
 argparse_usage = """
-# arbidopsis ribosomal
+# Arabidopsis chloroplast
+python3 go_fetch_2.0.py --taxonomy 3701 --target mitochondrion --db genbank --min 5  --max 10 --output arabidopsis_chloroplast --overwrite --email o.william.white@gmail.com --getorganelle
+
+# Arabidopsis ribosomal
 python3 go_fetch_2.0.py --taxonomy "Arabidopsis" --target ribosomal --db genbank --min 5  --max 10 --output arabidopsis_ribosomal --overwrite --email o.william.white@gmail.com --getorganelle
 
-# arbidopsis chloroplast
-python3 go_fetch_2.0.py --taxonomy 3701 --target mitochondrion --db genbank --min 5  --max 10 --output arabidopsis_mitochondrial --overwrite --email o.william.white@gmail.com --getorganelle
+# Solariellidae mitochondrion
+python3 go_fetch_2.0.py --taxonomy "Solariellidae" --target mitochondrion --db genbank --min 10  --max 50 --output solariellidae_mitochondrion --overwrite --email o.william.white@gmail.com --getorganelle
 
-
-
-
-python3 go_fetch_2.0.py \
-   --taxonomy "Arabidopsis lyrata" \
-   --target chloroplast \
-   --db genbank \
-   --min 8  \
-   --max 12 \
-   --output example_arabidopsis \
-   --overwrite \
-   --getorganelle \
-   --email user@email.com 
+# Solariellidae ribosomal
+python3 go_fetch_2.0.py --taxonomy "Solariellidae" --target ribosomal --db genbank --min 10  --max 50 --output solariellidae_ribosomal --overwrite --email o.william.white@gmail.com --getorganelle 
 """
 
 # argparse
@@ -47,13 +39,27 @@ parser.add_argument("--getorganelle", help="Format seed and gene database for ge
 parser.add_argument("--email",        help="Email for Entrez.", required=True)
 args = parser.parse_args()
 
-# additional dependency checks
-#try:
-#    subprocess.call(["samtools"], stderr=subprocess.DEVNULL)
-#except FileNotFoundError:
-#    sys.exit("Error: samtools not in path")
+### additional checks
 
-# additional checks
+# additional dependency checks
+
+try:
+    cmd = 'python -c "from Bio import Entrez, SeqIO"'
+    subprocess.call(cmd.split(" "), stderr=subprocess.DEVNULL)
+except FileNotFoundError:
+    sys.exit("Error: Biopython not in path")
+
+try:
+    subprocess.call(["trf"], stderr=subprocess.DEVNULL)
+except FileNotFoundError:
+    sys.exit("Error: trf not in path")
+
+try:
+    subprocess.call(["get_annotated_regions_from_gb.py"], stderr=subprocess.DEVNULL)
+except FileNotFoundError:
+    sys.exit("Error: get_annotated_regions_from_gb.py not in path")
+
+# additional parameter checks
 
 if args.max <= args.min:
     sys.exit("Error: --max must be larger than --min")
@@ -384,7 +390,7 @@ def format_gene(path, target):
     for gb in os.listdir(f"{path}/genbank/"):
         if gb.endswith(".gb"):
             cmd_gar.append(f"{path}/genbank/{gb}")
-    if target == "mitochondrial":
+    if target == "mitochondrion":
         cmd_gar.extend(["-o", f"{path}/annotated_regions", "-t", "CDS", "--mix"])
     else:
         if target == "ribosomal":
