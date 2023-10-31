@@ -4,6 +4,7 @@ import shutil
 import argparse
 from Bio import Entrez, SeqIO
 import time
+import urllib
 import subprocess
 from random import Random
 
@@ -13,15 +14,18 @@ argparse_description = """
 """
 
 argparse_usage = """
+
 # Arabidopsis chloroplast
 python3 go_fetch.py --taxonomy 3701 --target mitochondrion --db genbank --min 5  --max 10 --output arabidopsis_chloroplast --overwrite --getorganelle --email user_email@example.com 
 
 # Arabidopsis ribosomal
 python3 go_fetch.py --taxonomy Arabidopsis --target ribosomal --db genbank --min 5  --max 10 --output arabidopsis_ribosomal --overwrite --getorganelle --email user_email@example.com 
 
-# Brown argus butterfly ribosomal
-python3 go_fetch.py --taxonomy "Aricia agestis" --target ribosomal --db genbank --min 5  --max 10 --output aricia_agestis_ribosomal --overwrite --getorganelle --email user_email@example.com 
+# Drosophila mitochondrion
+python3 go_fetch.py --taxonomy 7215 --target mitochondrion --db genbank --min 5  --max 10 --output drosophila_mitochondrion --overwrite --getorganelle --email user_email@example.com
 
+# Drosophila ribosomal
+python3 go_fetch.py --taxonomy 7215 --target ribosomal --db genbank --min 5  --max 10 --output drosophila_ribosomal --overwrite --getorganelle --email user_email@example.com
 
 """
 
@@ -70,6 +74,8 @@ if args.max <= args.min:
 print(f"Using email {args.email}")
 Entrez.email = args.email
 
+
+### set api if given
 if args.api != None:
     print(f"Using API key: {args.api}") 
     Entrez.api_key = args.api
@@ -78,9 +84,9 @@ if args.api != None:
 ### increase time between and number of tries used by entrez
 
 # increase sleep time between tries
-Entrez.sleep_between_tries = 30
+Entrez.sleep_between_tries = 20
 # max tries 
-Entrez.max_tries = 30
+Entrez.max_tries = 20
 
 
 ### functions
@@ -98,45 +104,88 @@ def create_dir(dirpath, overwrite):
 
 # get taxonomic id from scientific name
 def get_taxonomic_id(taxonomy):
-    handle = Entrez.esearch(db="Taxonomy", term=f"{taxonomy}[Scientific Name]")
-    record = Entrez.read(handle)
+    try:
+        handle = Entrez.esearch(db="Taxonomy", term=f"{taxonomy}[Scientific Name]")
+        record = Entrez.read(handle)
+    except urllib.error.HTTPError as e:
+        if e.code == 400:
+            print("HTTP Error 400: get_taxonomic_id bad request. Retrying in 10 seconds...")
+            time.sleep(10)  # Wait for 10 seconds
+            handle = Entrez.esearch(db="Taxonomy", term=f"{taxonomy}[Scientific Name]")
+            record = Entrez.read(handle)
+        else:
+            sys.exit(f"HTTP Error {e}: get_taxonomic_id bad request. Exiting.")
     return str(record["IdList"][0])
-#assert get_taxonomic_id("Arabidopsis thaliana") == "3702"
+assert get_taxonomic_id("Arabidopsis thaliana") == "3702"
 
 # check if taxonomy id exists
 def taxid_exists(taxid):
-    handle = Entrez.efetch(db="taxonomy", id=taxid)
-    record = Entrez.read(handle)
+    try:
+        handle = Entrez.efetch(db="taxonomy", id=taxid)
+        record = Entrez.read(handle)
+    except urllib.error.HTTPError as e:
+        if e.code == 400:
+            print("HTTP Error 400: taxid_exists bad request. Retrying in 10 seconds...")
+            time.sleep(10)  # Wait for 10 seconds
+            handle = Entrez.efetch(db="taxonomy", id=taxid)
+            record = Entrez.read(handle)
+        else:
+            sys.exit(f"HTTP Error {e}: taxid_exists bad request. Exiting.")
     if record:
         return True
     else:
         return False
 assert taxid_exists(3701) == True
-#assert taxid_exists(123456789) == False
 
 # get scientific name from taxonomic id
 def get_scientific_name(taxonomy):
-    handle = Entrez.efetch(db="Taxonomy", id=taxonomy)
-    record = Entrez.read(handle)
+    try:
+        handle = Entrez.efetch(db="Taxonomy", id=taxonomy)
+        record = Entrez.read(handle)
+    except urllib.error.HTTPError as e:
+        if e.code == 400:
+            print("HTTP Error 400: get_scientific_name bad request. Retrying in 10 seconds...")
+            time.sleep(10)  # Wait for 10 seconds
+            handle = Entrez.efetch(db="Taxonomy", id=taxonomy)
+            record = Entrez.read(handle)
+        else: 
+            sys.exit(f"HTTP Error {e}: get_scientific_name. Exiting.")
     return record[0]["ScientificName"]
-#assert get_scientific_name("3702") == "Arabidopsis thaliana"
+assert get_scientific_name("3702") == "Arabidopsis thaliana"
 
 # check if taxonomy name exists
 def scientific_name_exists(taxonomy):
-    handle = Entrez.esearch(db="Taxonomy", term=f"{taxonomy}[Scientific Name]")
-    record = Entrez.read(handle)
+    try: 
+        handle = Entrez.esearch(db="Taxonomy", term=f"{taxonomy}[Scientific Name]")
+        record = Entrez.read(handle)
+    except urllib.error.HTTPError as e: 
+        if e.code == 400:
+            print("HTTP Error 400: scientific_name_exists bad request. Retrying in 10 seconds...")
+            time.sleep(10)  # Wait for 10 seconds
+            handle = Entrez.esearch(db="Taxonomy", term=f"{taxonomy}[Scientific Name]")
+            record = Entrez.read(handle)
+        else:
+            sys.exit(f"HTTP Error {e}: scientific_name_exists bad request. Exiting.")
     if int(record["Count"]) >= 1:
         return True
     else:
         return False
-#assert scientific_name_exists("Arabidopsis") == True
-#assert scientific_name_exists("NotArabidopsis") == False
+assert scientific_name_exists("Arabidopsis") == True
 
 # get lineage from taxid
 def get_lineage(taxid):
-    # efetch
-    handle = Entrez.efetch(db="Taxonomy", id=taxid, retmode="xml")
-    record = Entrez.read(handle)
+    try:
+        # efetch
+        handle = Entrez.efetch(db="Taxonomy", id=taxid, retmode="xml")
+        record = Entrez.read(handle)
+    except urllib.error.HTTPError as e:
+        if e.code == 400:
+            print("HTTP Error 400: get_lineage bad request. Retrying in 10 seconds...")
+            time.sleep(10)  # Wait for 10 seconds
+            handle = Entrez.efetch(db="Taxonomy", id=taxid, retmode="xml")
+            record = Entrez.read(handle)
+        else:
+            sys.exit(f"HTTP Error {e}: get_lineage bad request. Exiting.")
     # get lineage
     lineage = record[0]["Lineage"].split("; ")[::-1]
     # return lineage
@@ -145,11 +194,12 @@ def get_lineage(taxid):
 #assert get_lineage(3701) == ["Camelineae", "Brassicaceae", "Brassicales", "malvids", "rosids", "Pentapetalae", "Gunneridae", "eudicotyledons", "Mesangiospermae", "Magnoliopsida", "Spermatophyta", "Euphyllophyta", "Tracheophyta", "Embryophyta", "Streptophytina", "Streptophyta", "Viridiplantae", "Eukaryota", "cellular organisms"]
 
 def get_children(taxonomy):
-    print(taxonomy)
     handle = Entrez.esearch(db="taxonomy", term=f"{taxonomy}[next level]", retmax=9999)
     record = Entrez.read(handle)
     children = []
-    print(f"{len(record['IdList'])} children found")
+    print(f"Found {len(record['IdList'])} children")
+    if len(record['IdList']) > 10: 
+        print("This might take some time :)")
     for i in record["IdList"]:
         children.append(get_scientific_name(i))
     return(children)
@@ -263,10 +313,12 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
     # does the number of sequences meet the minimum threshold
     if count_idlist_total < min_th:
         print("Minimum threhold not reached, moving up within lineage")
-        taxonomy = lineage[lineage.index(taxonomy)+1]
-        print(f"Next level is {taxonomy}\n")
-        return recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist_combined)
-
+        try: 
+            taxonomy = lineage[lineage.index(taxonomy)+1]
+            print(f"Next level is {taxonomy}\n")
+            return recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist_combined)
+        except IndexError:
+            sys.exit("Error: cannot search any higher within lineage")
     else:
 
         print("Minimum threhold reached")
@@ -438,8 +490,6 @@ except:
 print(f"NCBI Id: {taxonomy_id}")
 print(f"Scientific name: {taxonomy_name}")
 
-time.sleep(3)
-
 # get lineage
 print("\nChecking lineage\n")
 
@@ -453,8 +503,6 @@ lineage.insert(0, taxonomy_name)
 # print phylogeny
 # print_phylogeny(lineage[::-1], optional_children = children)
 print_phylogeny(lineage[::-1])
-
-time.sleep(3)
 
 print("\nStarting search\n")
 

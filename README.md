@@ -27,11 +27,12 @@ Below is a summary of the main input parameters.
   --overwrite           Overwrite output directory.
   --getorganelle        Format seed and gene database for get organelle.
   --email EMAIL         Email for Entrez.
+  --api API             API key for NCBI. Optional.
 ```
 
 ### How it works
 
-The user provides a taxonomy as a taxonomic name (e.g. "Arabidopsis thaliana") or NCBI taxonomy ID (e.g. "3702"). 
+The user provides a taxonomy as a taxonomic name (e.g. "Arabidopsis thaliana") or NCBI taxonomy ID (e.g. "3702"). However, **it is reccomended to use NCBI taxonomy IDs**, as some unrelated groups share names, for example the name Drosophila is used for both a genus of fruit flies and basidiomycete fungi. 
 
 The script will count the number or target sequences available for the user given taxonomy. If there are not enough sequence available based on the `--min` parameter, the script will count the number of sequences available for the parent rank, until the minimum threshold is reached. 
 
@@ -65,7 +66,7 @@ python3 go_fetch.py \
 
 # Drosophila mitochondrion
 python3 go_fetch.py \
-   --taxonomy "Drosophila" \
+   --taxonomy 7215 \
    --target mitochondrion \
    --db genbank \
    --min 10 --max 50 \
@@ -76,7 +77,7 @@ python3 go_fetch.py \
 
 # Drosophila ribosomal
 python3 go_fetch.py \
-   --taxonomy "Drosophila" \
+   --taxonomy 7215 \
    --target ribosomal \
    --db genbank \
    --min 10 --max 50 \
@@ -84,5 +85,6 @@ python3 go_fetch.py \
    --overwrite \
    --getorganelle \
    --email user_email@example.com
+
 ```
 
