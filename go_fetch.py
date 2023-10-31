@@ -3,6 +3,7 @@ import sys
 import shutil
 import argparse
 from Bio import Entrez, SeqIO
+import time
 import subprocess
 from random import Random
 
@@ -16,13 +17,12 @@ argparse_usage = """
 python3 go_fetch.py --taxonomy 3701 --target mitochondrion --db genbank --min 5  --max 10 --output arabidopsis_chloroplast --overwrite --getorganelle --email user_email@example.com 
 
 # Arabidopsis ribosomal
-python3 go_fetch.py --taxonomy "Arabidopsis" --target ribosomal --db genbank --min 5  --max 10 --output arabidopsis_ribosomal --overwrite --getorganelle --email user_email@example.com 
+python3 go_fetch.py --taxonomy Arabidopsis --target ribosomal --db genbank --min 5  --max 10 --output arabidopsis_ribosomal --overwrite --getorganelle --email user_email@example.com 
 
-# Drosophila mitochondrion
-python3 go_fetch.py --taxonomy "Drosophila" --target mitochondrion --db genbank --min 10  --max 50 --output drosophila_mitochondrion --overwrite --getorganelle --email user_email@example.com  
+# Brown argus butterfly ribosomal
+python3 go_fetch.py --taxonomy "Aricia agestis" --target ribosomal --db genbank --min 5  --max 10 --output aricia_agestis_ribosomal --overwrite --getorganelle --email user_email@example.com 
 
-# Drosophila ribosomal
-python3 go_fetch.py --taxonomy "Drosophila" --target ribosomal --db genbank --min 10  --max 50 --output drosophila_ribosomal --overwrite --getorganelle --email user_email@example.com 
+
 """
 
 # argparse
@@ -37,6 +37,7 @@ parser.add_argument("--output",       help="Output directory.", required=False)
 parser.add_argument("--overwrite",    help="Overwrite output directory.", action="store_true", required=False)
 parser.add_argument("--getorganelle", help="Format seed and gene database for get organelle.", action="store_true", required=False)
 parser.add_argument("--email",        help="Email for Entrez.", required=True)
+parser.add_argument("--api",          help="API for NCBI.", type=str, required=False)
 args = parser.parse_args()
 
 ### additional checks
@@ -66,15 +67,20 @@ if args.max <= args.min:
 
 
 ### set email
+print(f"Using email {args.email}")
 Entrez.email = args.email
+
+if args.api != None:
+    print(f"Using API key: {args.api}") 
+    Entrez.api_key = args.api
 
 
 ### increase time between and number of tries used by entrez
 
 # increase sleep time between tries
-Entrez.sleep_between_tries = 10
+Entrez.sleep_between_tries = 30
 # max tries 
-Entrez.max_tries = 10
+Entrez.max_tries = 30
 
 
 ### functions
@@ -130,18 +136,20 @@ def scientific_name_exists(taxonomy):
 def get_lineage(taxid):
     # efetch
     handle = Entrez.efetch(db="Taxonomy", id=taxid, retmode="xml")
-    records = Entrez.read(handle)
+    record = Entrez.read(handle)
     # get lineage
-    lineage = records[0]["Lineage"].split("; ")[::-1]
+    lineage = record[0]["Lineage"].split("; ")[::-1]
     # return lineage
     return lineage
 
 #assert get_lineage(3701) == ["Camelineae", "Brassicaceae", "Brassicales", "malvids", "rosids", "Pentapetalae", "Gunneridae", "eudicotyledons", "Mesangiospermae", "Magnoliopsida", "Spermatophyta", "Euphyllophyta", "Tracheophyta", "Embryophyta", "Streptophytina", "Streptophyta", "Viridiplantae", "Eukaryota", "cellular organisms"]
 
 def get_children(taxonomy):
+    print(taxonomy)
     handle = Entrez.esearch(db="taxonomy", term=f"{taxonomy}[next level]", retmax=9999)
     record = Entrez.read(handle)
     children = []
+    print(f"{len(record['IdList'])} children found")
     for i in record["IdList"]:
         children.append(get_scientific_name(i))
     return(children)
@@ -430,16 +438,23 @@ except:
 print(f"NCBI Id: {taxonomy_id}")
 print(f"Scientific name: {taxonomy_name}")
 
+time.sleep(3)
+
 # get lineage
-print("\nChecking lineage relationships\n")
+print("\nChecking lineage\n")
+
 lineage = get_lineage(taxonomy_id)
 lineage.insert(0, taxonomy_name)
 
 # get children
-children = get_children(taxonomy_name)
+# children = get_children(taxonomy_name)
+# only request child lineages if needed to reduce entrez searches
 
 # print phylogeny
-print_phylogeny(lineage[::-1], optional_children = children)
+# print_phylogeny(lineage[::-1], optional_children = children)
+print_phylogeny(lineage[::-1])
+
+time.sleep(3)
 
 print("\nStarting search\n")
 
