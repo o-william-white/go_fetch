@@ -32,7 +32,7 @@ Below is a summary of the main input parameters.
 
 ### How it works
 
-The user provides a taxonomy as a taxonomic name (e.g. "Arabidopsis thaliana") or NCBI taxonomy ID (e.g. "3702"). However, **it is reccomended to use NCBI taxonomy IDs**, as some unrelated groups share names, for example the name Drosophila is used for both a genus of fruit flies and basidiomycete fungi. 
+The user provides a taxonomy as a taxonomic name (e.g. "Arabidopsis thaliana") or NCBI taxonomy ID (e.g. "3702"). However, **it is reccomended to use NCBI taxonomy IDs**, as some unrelated groups share names, for example the name "Drosophila" is used for both a genus of fruit flies and basidiomycete fungi. 
 
 The script will count the number or target sequences available for the user given taxonomy. If there are not enough sequence available based on the `--min` parameter, the script will count the number of sequences available for the parent rank, until the minimum threshold is reached. 
 
