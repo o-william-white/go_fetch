@@ -18,7 +18,7 @@ Below is a summary of the main input parameters.
 ```
   -h, --help            show this help message and exit
   --taxonomy TAXONOMY   Taxonomy of rank to search for e.g. "Arabidopsis"
-  --target TARGET       Target sequence type. Options = [chloroplast, mitochondrion, ribosomal].
+  --target TARGET       Target sequence type. Options = [chloroplast, mitochondrion, ribosomal, ribosomal_complete].
   --db DB               Database to search. Options = [refseq, genbank].
   --min MIN             Minimum number of target sequences to download.
   --max MAX             Maximum number of target sequences to download. 
@@ -38,49 +38,51 @@ The script will count the number or target sequences available for the user give
 
 If the maximum number of sequences is exceeded, based on the `--max` parameter, the script will subsample the children lineages, aiming for an even sampling across children. 
 
+Note that the `--target` option `ribosomal` will search for sequences with any of the ribosomal annotations (28S/25S, 18S, 5.8S), whereas `ribosomal_complete` will try to find sequences with all annotations. 
+
 ### Example usage
 
 Below are simple examples of how to use the script. 
 ```
-# Arabidopsis chloroplast
-python3 go_fetch.py \
-   --taxonomy 3701 \
-   --target mitochondrion 
-   --db genbank z
+# Arabidopsis thaliana chloroplast
+./go_fetch.py \
+   --taxonomy 3702 \
+   --target chloroplast \ 
+   --db genbank \
    --min 5 --max 10 \
    --output arabidopsis_chloroplast \
    --overwrite \
    --getorganelle \
    --email user_email@example.com
 
-# Arabidopsis ribosomal
-python3 go_fetch.py \
-   --taxonomy "Arabidopsis" \
-   --target ribosomal \
+# Arabidopsis thaliana complete ribosomal
+./go_fetch.py \
+   --taxonomy "Arabidopsis thaliana" \
+   --target ribosomal_complete \
    --db genbank \
    --min 5 --max 10 \
-   --output arabidopsis_ribosomal \
+   --output arabidopsis_ribosomal_complete \
    --overwrite \
    --getorganelle \
    --email user_email@example.com
 
-# Drosophila mitochondrion
-python3 go_fetch.py \
-   --taxonomy 7215 \
+# Drosophila melanogaster mitochondrion
+./go_fetch.py \
+   --taxonomy 7227 \
    --target mitochondrion \
    --db genbank \
-   --min 10 --max 50 \
+   --min 5 --max 10 \
    --output drosophila_mitochondrion \
    --overwrite \
    --getorganelle \
    --email user_email@example.com
 
-# Drosophila ribosomal
-python3 go_fetch.py \
-   --taxonomy 7215 \
+# Drosophila melanogaster ribosomal
+./go_fetch.py \
+   --taxonomy 7227  \
    --target ribosomal \
    --db genbank \
-   --min 10 --max 50 \
+   --min 5 --max 10 \
    --output drosophila_ribosomal \
    --overwrite \
    --getorganelle \

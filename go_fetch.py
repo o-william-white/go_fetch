@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import shutil
@@ -10,29 +12,17 @@ from random import Random
 
 # argparse
 argparse_description = """
-
+Simple python script to fetch organelle or ribosomal reference sequences from NCBI for a given taxonomy.
 """
 
 argparse_usage = """
-
-# Arabidopsis chloroplast
-python3 go_fetch.py --taxonomy 3701 --target mitochondrion --db genbank --min 5  --max 10 --output arabidopsis_chloroplast --overwrite --getorganelle --email user_email@example.com 
-
-# Arabidopsis ribosomal
-python3 go_fetch.py --taxonomy Arabidopsis --target ribosomal --db genbank --min 5  --max 10 --output arabidopsis_ribosomal --overwrite --getorganelle --email user_email@example.com 
-
-# Drosophila mitochondrion
-python3 go_fetch.py --taxonomy 7215 --target mitochondrion --db genbank --min 5  --max 10 --output drosophila_mitochondrion --overwrite --getorganelle --email user_email@example.com
-
-# Drosophila ribosomal
-python3 go_fetch.py --taxonomy 7215 --target ribosomal --db genbank --min 5  --max 10 --output drosophila_ribosomal --overwrite --getorganelle --email user_email@example.com
-
+./go_fetch.py --taxonomy 3702--target chloroplast --db genbank --min 5 --max 10 --output arabidopsis_chloroplast --overwrite --getorganelle --email user_email@example.com
 """
 
 # argparse
-parser = argparse.ArgumentParser(description=argparse_description, usage=argparse_usage)
+parser = argparse.ArgumentParser(prog = "go_batch.py", description=argparse_description, usage=argparse_usage)
 parser.add_argument("--taxonomy",     help="Taxonomy of rank to search for e.g. \"Arabidopsis\"", type=str, required=True)
-parser.add_argument("--target",       help="Target sequence type.", choices=["chloroplast", "mitochondrion", "ribosomal"], required=True)
+parser.add_argument("--target",       help="Target sequence type.", choices=["chloroplast", "mitochondrion", "ribosomal", "ribosomal_complete"], required=True)
 parser.add_argument("--db",           help="Database to search. Either refseq (NCBI) or genbank (INSDC). Default=refseq.", choices=["refseq", "genbank"], required=False, default="refseq")
 parser.add_argument("--min",          help="Minimum number of target sequences to download.", type=int, required=False)
 parser.add_argument("--max",          help="Maximum number of target sequences to download. Must be larger than --min.", type=int, required=False)
@@ -42,6 +32,7 @@ parser.add_argument("--overwrite",    help="Overwrite output directory.", action
 parser.add_argument("--getorganelle", help="Format seed and gene database for get organelle.", action="store_true", required=False)
 parser.add_argument("--email",        help="Email for Entrez.", required=True)
 parser.add_argument("--api",          help="API for NCBI.", type=str, required=False)
+parser.add_argument("--version",      action="version", version='0.0.1')
 args = parser.parse_args()
 
 ### additional checks
@@ -218,19 +209,20 @@ def print_phylogeny(main_lineage, optional_children = []):
             print(f"{spacer}{c}")
 
 # generate search term
-# target = "chloroplast", "mitochondrion", "ribosomal"
-# db can be refseq or genbank
+# target = "chloroplast", "mitochondrion", "ribosomal", "ribosomal_complete"
 def search_term(taxid, target, db):
     # add taxid to term
     term = f"{taxid}[Organism]"
     if target == "chloroplast" or target == "mitochondrion":
-        # genbank is part of the International Nucleotide Sequence Database Collaboration (INSDC) along with the European Nucleotide Archive and the DNA Data Bank of Japan (DDBJ)
-        # refseq are derived from genbank but not part of
         term += f" AND {target}[Title] AND complete genome[Title]"
     if target == "ribosomal":
+        term = f"({taxid}[Organism] AND (28S[Title] OR 25S[Title])) OR ({taxid}[Organism] AND 18S[Title]) OR ({taxid}[Organism] AND 5.8S[Title])"
+    if target == "ribosomal_complete":
         term += f" AND (28S[Title] OR 25S[Title]) AND 18S[Title] AND 5.8S[Title]"
+    # refseq are derived from genbank but not part of
     if db == "refseq":
         term += f" AND refseq[filter]"
+    # genbank is part of the International Nucleotide Sequence Database Collaboration (INSDC) along with the European Nucleotide Archive and the DNA Data Bank of Japan (DDBJ)
     if db == "genbank":
         term += f" AND ddbj_embl_genbank[filter]"
     return term 
@@ -345,63 +337,79 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
 
             # get children
             children = get_children(taxonomy)
-
-            print("All children identified:\n")
-
-            # print phylogeny
-            print_phylogeny([taxonomy], children)
-
-            # create dictionary of sequence ids from children
-            dictionary_children = {}
-
-            # iterate through children
-            for c in children:
-
-                if c != "environmental samples":
-
-                    # define search term
-                    term = search_term(c, target, db)
-
-                    # esearch using term and return idlist of matching accessions
-                    esearch_idlist = entrez_esearch(term)
-
-                    if len(esearch_idlist) != 0:
-                        for i in esearch_idlist:
-                            if i not in idlist:
-                                # print(i)
-                                if dictionary_children.get(c) is None:
-                                    dictionary_children[c] = [i]
-                                else:
-                                    dictionary_children[c].append(i)
-
-            # subsample dictionary
-            dictionary_children_subsample = subsample(dictionary_children, count_idlist_subsample, args.seed)
-
-            # print how many sequences found across children
-            print("\nIdentified sequences:")
-            for key, value, in dictionary_children.items():
-                print(f"   {len(value)}  {key}")
-
-            # print how many sequences subsampled across children
-            print("\nSampled sequences:")
-            list_subsample = []
-            for key, value, in dictionary_children_subsample.items():
-                print(f"   {len(value)}  {key}")
-                for v in value:
-                    list_subsample.append(v)
-
-            list_subsample
-
-            print("\nCreating output directory")
-            create_dir(args.output, args.overwrite)
             
-            list_download = idlist.copy()
-            list_download.extend(list_subsample)
+            if len(children) == 0: 
+                
+                print("No children lineages. Must be a terminal rank. i.e species or subspecies\n")
+                
+                print(f"Downloading the first {count_idlist_subsample} sequences\n")
 
-            print(f"\nDownloading {len(list_download)} sequences")
-            for i in list_download:
-                entrez_efetch(i, "fasta", f"{args.output}/fasta")
-                entrez_efetch(i, "gb",    f"{args.output}/genbank")
+                print("Creating output directory")
+                create_dir(args.output, args.overwrite)
+
+                # efetch
+                for i in idlist_combined[:count_idlist_subsample]:
+                    entrez_efetch(i, "fasta", f"{args.output}/fasta")
+                    entrez_efetch(i, "gb",    f"{args.output}/genbank")
+                
+            else:
+
+                print("All children identified:\n")
+ 
+                # print phylogeny
+                print_phylogeny([taxonomy], children)
+
+                # create dictionary of sequence ids from children
+                dictionary_children = {}
+
+                # iterate through children
+                for c in children:
+
+                    if c != "environmental samples":
+
+                        # define search term
+                        term = search_term(c, target, db)
+
+                        # esearch using term and return idlist of matching accessions
+                        esearch_idlist = entrez_esearch(term)
+
+                        if len(esearch_idlist) != 0:
+                            for i in esearch_idlist:
+                                if i not in idlist:
+                                    # print(i)
+                                    if dictionary_children.get(c) is None:
+                                        dictionary_children[c] = [i]
+                                    else:
+                                        dictionary_children[c].append(i)
+
+                # subsample dictionary
+                dictionary_children_subsample = subsample(dictionary_children, count_idlist_subsample, args.seed)
+
+                # print how many sequences found across children
+                print("\nIdentified sequences:")
+                for key, value, in dictionary_children.items():
+                    print(f"   {len(value)}  {key}")
+
+                # print how many sequences subsampled across children
+                print("\nSampled sequences:")
+                list_subsample = []
+                for key, value, in dictionary_children_subsample.items():
+                    print(f"   {len(value)}  {key}")
+                    for v in value:
+                        list_subsample.append(v)
+
+                list_subsample
+
+                print("\nCreating output directory")
+                create_dir(args.output, args.overwrite)
+            
+                list_download = idlist.copy()
+                list_download.extend(list_subsample)
+
+                print(f"\nDownloading {len(list_download)} sequences")
+                for i in list_download:
+                    entrez_efetch(i, "fasta", f"{args.output}/fasta")
+                    entrez_efetch(i, "gb",    f"{args.output}/genbank")
 
 
 # cat files
@@ -450,10 +458,10 @@ def format_gene(path, target):
     for gb in os.listdir(f"{path}/genbank/"):
         if gb.endswith(".gb"):
             cmd_gar.append(f"{path}/genbank/{gb}")
-    if target == "mitochondrion":
+    if target == "mitochondrion" or target == "chloroplast":
         cmd_gar.extend(["-o", f"{path}/annotated_regions", "-t", "CDS", "--mix"])
     else:
-        if target == "ribosomal":
+        if target == "ribosomal" or target == "ribosomal_complete":
             cmd_gar.extend(["-o", f"{path}/annotated_regions", "-t", "rRNA", "--mix"])
     # subprocess run
     result_gar = subprocess.run(cmd_gar, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -468,7 +476,7 @@ def format_gene(path, target):
 ### main
 
 # get and check ncbi taxonomy_id and scientific_name
-print("Running go_fetch.py")
+print("Running go_fetch")
 print("Checking user input\n")
 try:
     int(args.taxonomy)
@@ -514,6 +522,6 @@ if args.getorganelle:
     format_seed(args.output)
     format_gene(args.output, args.target)
 
-print("\ngo_fetch.py complete!")
+print("\ngo_fetch complete!")
 
 
