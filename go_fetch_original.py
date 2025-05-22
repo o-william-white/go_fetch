@@ -22,7 +22,7 @@ argparse_usage = """
 # argparse
 parser = argparse.ArgumentParser(prog = "go_batch.py", description=argparse_description, usage=argparse_usage)
 parser.add_argument("--taxonomy",     help="Taxonomy of rank to search for e.g. \"Arabidopsis\"", type=str, required=True)
-parser.add_argument("--target",       help="Target sequence type.", choices=["chloroplast", "mitochondrion", "CO1", "ribosomal_any", "ribosomal_complete", "ribosomal_28S"], required=True)
+parser.add_argument("--target",       help="Target sequence type.", choices=["chloroplast", "mitochondrion", "ribosomal", "ribosomal_complete"], required=True)
 parser.add_argument("--db",           help="Database to search. Either refseq (NCBI) or genbank (INSDC). Default=refseq.", choices=["refseq", "genbank"], required=False, default="refseq")
 parser.add_argument("--min",          help="Minimum number of target sequences to download.", type=int, required=False)
 parser.add_argument("--max",          help="Maximum number of target sequences to download. Must be larger than --min.", type=int, required=False)
@@ -209,20 +209,16 @@ def print_phylogeny(main_lineage, optional_children = []):
             print(f"{spacer}{c}")
 
 # generate search term
-# target = "chloroplast", "mitochondrion", "CO1", "ribosomal", "ribosomal_complete", "ribosomal_28S"
+# target = "chloroplast", "mitochondrion", "ribosomal", "ribosomal_complete"
 def search_term(taxid, target, db):
     # add taxid to term
     term = f"{taxid}[Organism]"
     if target == "chloroplast" or target == "mitochondrion":
         term += f" AND {target}[Title] AND complete genome[Title]"
-    if target == "CO1":
-        term += f" AND (CO1[Gene] OR COX1[Gene]) OR COI[Gene]"
-    if target == "ribosomal_any":
-        term = f"({taxid}[Organism] AND (28S[Gene] OR 25S[Gene])) OR ({taxid}[Organism] AND 18S[Gene]) OR ({taxid}[Organism] AND 5.8S[Gene])"
+    if target == "ribosomal":
+        term = f"({taxid}[Organism] AND (28S[Title] OR 25S[Title])) OR ({taxid}[Organism] AND 18S[Title]) OR ({taxid}[Organism] AND 5.8S[Title])"
     if target == "ribosomal_complete":
-        term += f" AND (28S[Gene] OR 25S[Gene]) AND 18S[Gene] AND 5.8S[Gene]"
-    if target == "ribosomal_28S":
-        term += f"({taxid}[Organism] AND (28S[Gene])"
+        term += f" AND (28S[Title] OR 25S[Title]) AND 18S[Title] AND 5.8S[Title]"
     # refseq are derived from genbank but not part of
     if db == "refseq":
         term += f" AND refseq[filter]"
@@ -465,7 +461,7 @@ def format_gene(path, target):
     if target == "mitochondrion" or target == "chloroplast":
         cmd_gar.extend(["-o", f"{path}/annotated_regions", "-t", "CDS", "--mix"])
     else:
-        if target == "ribosomal_any" or target == "ribosomal_complete" or target == "ribosomal_28S":
+        if target == "ribosomal" or target == "ribosomal_complete":
             cmd_gar.extend(["-o", f"{path}/annotated_regions", "-t", "rRNA", "--mix"])
     # subprocess run
     result_gar = subprocess.run(cmd_gar, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -527,3 +523,4 @@ if args.getorganelle:
     format_gene(args.output, args.target)
 
 print("\ngo_fetch complete!")
+
