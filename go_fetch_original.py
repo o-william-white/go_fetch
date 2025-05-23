@@ -304,7 +304,7 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
 
     # does the number of sequences meet the minimum threshold
     if count_idlist_total < min_th:
-        print("Minimum threhold not reached, moving up within lineage")
+        print("Minimum threshold not reached, moving up within lineage")
         try: 
             taxonomy = lineage[lineage.index(taxonomy)+1]
             print(f"Next level is {taxonomy}\n")
