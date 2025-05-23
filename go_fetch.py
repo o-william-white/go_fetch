@@ -336,7 +336,7 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
             print(f"Maximum threshold not exceeded. Downloading {count_idlist_total} sequences\n")
             
             print("\nCreating output directory")
-            create_dir(args.output, args.overwrite)
+            create_dir(args.output, args.overwrite, args.append)
 
             # efetch
             for i in idlist_combined:
@@ -361,7 +361,7 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
                 print(f"Downloading the first {count_idlist_subsample} sequences\n")
 
                 print("Creating output directory")
-                create_dir(args.output, args.overwrite)
+                create_dir(args.output, args.overwrite, args.append)
 
                 # efetch
                 for i in idlist_combined[:count_idlist_subsample]:
@@ -417,7 +417,7 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
                 list_subsample
 
                 print("\nCreating output directory")
-                create_dir(args.output, args.overwrite)
+                create_dir(args.output, args.overwrite, args.append)
             
                 list_download = idlist.copy()
                 list_download.extend(list_subsample)
