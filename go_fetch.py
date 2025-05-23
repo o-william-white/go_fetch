@@ -29,6 +29,7 @@ parser.add_argument("--max",          help="Maximum number of target sequences t
 parser.add_argument("--seed",         help="Seed used for subsampling.", type=int, required=False)
 parser.add_argument("--output",       help="Output directory.", required=False)
 parser.add_argument("--overwrite",    help="Overwrite output directory.", action="store_true", required=False)
+parser.add_argument("--append", help="Append to output directory if it exists.", action="store_true", required=False)
 parser.add_argument("--getorganelle", help="Format seed and gene database for get organelle.", action="store_true", required=False)
 parser.add_argument("--email",        help="Email for Entrez.", required=True)
 parser.add_argument("--api",          help="API for NCBI.", type=str, required=False)
@@ -82,16 +83,27 @@ Entrez.max_tries = 20
 
 ### functions
 
-# create dir and overwrite if specified
-def create_dir(dirpath, overwrite):
+# create dir and overwrite or append if specified
+def create_dir(dirpath, overwrite, append):
     if os.path.exists(dirpath):
-        if overwrite == True:
+        if overwrite:
             shutil.rmtree(dirpath)
+            os.mkdir(dirpath)
+            os.mkdir(f"{dirpath}/fasta")
+            os.mkdir(f"{dirpath}/genbank")
+        elif append:
+            # Only create subfolders if they don't exist
+            if not os.path.exists(f"{dirpath}/fasta"):
+                os.mkdir(f"{dirpath}/fasta")
+            if not os.path.exists(f"{dirpath}/genbank"):
+                os.mkdir(f"{dirpath}/genbank")
+            # Do not remove anything
         else:
-            sys.exit(f"{dirpath} already exists. Remove or use --overwrite")
-    os.mkdir(dirpath)
-    os.mkdir(f"{dirpath}/fasta")
-    os.mkdir(f"{dirpath}/genbank")
+            sys.exit(f"{dirpath} already exists. Remove or use --overwrite or --append")
+    else:
+        os.mkdir(dirpath)
+        os.mkdir(f"{dirpath}/fasta")
+        os.mkdir(f"{dirpath}/genbank")
 
 # get taxonomic id from scientific name
 def get_taxonomic_id(taxonomy):
