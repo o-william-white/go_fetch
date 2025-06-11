@@ -163,6 +163,23 @@ def scientific_name_exists(taxonomy):
         return False
 assert scientific_name_exists("Arabidopsis") == True
 
+# get rank from taxid
+def get_rank(taxid):
+    try:
+        # efetch
+        handle = Entrez.efetch(db="Taxonomy", id=taxid, retmode="xml")
+        record = Entrez.read(handle)
+    except urllib.error.HTTPError as e:
+        if e.code == 400:
+            print("HTTP Error 400: get_rank bad request. Retrying in 10 seconds...")
+            time.sleep(10)  # Wait for 10 seconds
+            handle = Entrez.efetch(db="Taxonomy", id=taxid, retmode="xml")
+            record = Entrez.read(handle)
+        else:
+            sys.exit(f"HTTP Error {e}: get_rank bad request. Exiting.")
+    rank = record[0]["Rank"]
+    return rank
+
 # get lineage from taxid
 def get_lineage(taxid):
     try:
@@ -327,22 +344,38 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
                 entrez_efetch(i, "fasta", f"{args.output}/fasta")
                 entrez_efetch(i, "gb",    f"{args.output}/genbank")
 
-
         # if maximum exceeded, download subsample
         else:
+
             # get subsample number required
             count_idlist_subsample = max_th - count_idlist_input
+
+            # get taxonomic id
+            taxid = get_taxonomic_id(taxonomy)
+
+            # get taxonomic rank
+            rank = get_rank(taxid)
 
             print(f"Maximum threshold exceeded. Subsampling {count_idlist_subsample} sequences from children\n")
 
             # get children
             children = get_children(taxonomy)
-            
-            if len(children) == 0: 
+
+            if len(children) == 0 or rank == "species": 
                 
-                print("No children lineages. Must be a terminal rank. i.e species or subspecies\n")
-                
-                print(f"Downloading the first {count_idlist_subsample} sequences\n")
+                if len(children) == 0:
+
+                    print("No children lineages. Must be a terminal rank, i.e species\n")
+
+                if rank == "species":
+                    # note that a entrez search term with a subspecies taxonomy e.g. "Lutra lutra chinensis" does not return any results
+                    # avoid searching below species rank
+                    print("No children linages at species rank or above.\n")
+
+                    if len(children) >= 1: 
+                        print_phylogeny([taxonomy], children)
+
+                print(f"\nDownloading the first {count_idlist_subsample} sequences\n")
 
                 print("Creating output directory")
                 create_dir(args.output, args.overwrite)
@@ -367,7 +400,6 @@ def recursive_search(taxonomy, lineage, target, db, min_th, max_th, idlist):
 
                     if c != "environmental samples":
 
-                        # define search term
                         term = search_term(c, target, db)
 
                         # esearch using term and return idlist of matching accessions
